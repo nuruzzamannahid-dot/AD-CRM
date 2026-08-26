@@ -36,7 +36,7 @@ CREATE TABLE IF NOT EXISTS calls (
   follow_up_date TEXT,
   status        TEXT NOT NULL DEFAULT 'reached',   -- 'reached' | 'no_answer'
   resolved      INTEGER NOT NULL DEFAULT 0,        -- 0/1, only meaningful for Dissatisfied
-  created_at    TEXT NOT NULL DEFAULT (datetime('now'))
+  created_at    TEXT NOT NULL DEFAULT (datetime('now', '+6 hours'))
 );
 
 CREATE INDEX IF NOT EXISTS idx_calls_created_at ON calls(created_at);
