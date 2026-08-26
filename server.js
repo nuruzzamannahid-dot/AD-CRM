@@ -14,6 +14,22 @@ function dhakaDateKey(d = new Date()) {
   return new Intl.DateTimeFormat('en-CA', { timeZone: DHAKA_TZ }).format(d);
 }
 
+// SQLite's own `datetime('now')` default (used by the calls table) returns
+// UTC. Every date filter in this file (rangeToDates, metrics, funnel) is
+// computed against the Dhaka calendar day, so a call logged between 6pm and
+// midnight UTC — i.e. midnight to 6am Dhaka — gets stamped with the previous
+// UTC day and silently disappears from "today" on the dashboard. Stamp
+// created_at explicitly with the Dhaka wall-clock time on every insert
+// instead of trusting the column default.
+function dhakaNowSql(d = new Date()) {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: DHAKA_TZ, hour12: false,
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', second: '2-digit'
+  }).formatToParts(d).reduce((acc, p) => { acc[p.type] = p.value; return acc; }, {});
+  return `${parts.year}-${parts.month}-${parts.day} ${parts.hour}:${parts.minute}:${parts.second}`;
+}
+
 function rangeToDates(range) {
   const today = new Date();
   const end = dhakaDateKey(today);
@@ -124,9 +140,9 @@ app.post('/api/call-requests', async (req, res) => {
     const merchant = await findOrCreateMerchant(db, merchantName);
 
     const r = await db.execute({
-      sql: `INSERT INTO calls (merchant_id, ad_manager_id, reason_tag, notes, status, resolved)
-            VALUES (?, ?, ?, ?, 'reached', 1)`,
-      args: [merchant.id, merchant.ad_manager_id, CALL_REQUEST_TAG, reason]
+      sql: `INSERT INTO calls (merchant_id, ad_manager_id, reason_tag, notes, status, resolved, created_at)
+            VALUES (?, ?, ?, ?, 'reached', 1, ?)`,
+      args: [merchant.id, merchant.ad_manager_id, CALL_REQUEST_TAG, reason, dhakaNowSql()]
     });
 
     res.status(201).json({
@@ -188,9 +204,9 @@ app.post('/api/calls', async (req, res) => {
   const resolved = reason_tag === 'Dissatisfied' ? 0 : 1;
 
   const r = await db.execute({
-    sql: `INSERT INTO calls (merchant_id, ad_manager_id, reason_tag, sub_tag, notes, follow_up_date, status, resolved)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-    args: [merchant_id, ad_manager_id, reason_tag, sub_tag || null, notes || null, follow_up_date || null, status || 'reached', resolved]
+    sql: `INSERT INTO calls (merchant_id, ad_manager_id, reason_tag, sub_tag, notes, follow_up_date, status, resolved, created_at)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    args: [merchant_id, ad_manager_id, reason_tag, sub_tag || null, notes || null, follow_up_date || null, status || 'reached', resolved, dhakaNowSql()]
   });
 
   res.status(201).json({ id: Number(r.lastInsertRowid) });
