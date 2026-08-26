@@ -60,6 +60,86 @@ app.get('/api/merchants', async (req, res) => {
   res.json(r.rows);
 });
 
+// ---- Public call-request intake (Merchant Issues form "Request For Call") --
+//
+// Called directly by the merchant-facing form (Merchant-Issues-form repo),
+// unauthenticated. Every request must show up on the CRM: if the merchant
+// name doesn't match an existing merchant, we create one on the fly and
+// file it under a fallback "Unassigned" AD manager rather than dropping it.
+
+const CALL_REQUEST_TAG = 'Call Request';
+const UNASSIGNED_MANAGER = { name: 'Unassigned', initials: 'NA' };
+
+async function ensureCallRequestTag(db) {
+  await db.execute({
+    sql: 'INSERT OR IGNORE INTO reason_tags (name, sort_order) VALUES (?, 999)',
+    args: [CALL_REQUEST_TAG]
+  });
+}
+
+async function getOrCreateUnassignedManagerId(db) {
+  const existing = await db.execute({
+    sql: 'SELECT id FROM ad_managers WHERE name = ?',
+    args: [UNASSIGNED_MANAGER.name]
+  });
+  if (existing.rows[0]) return existing.rows[0].id;
+
+  const inserted = await db.execute({
+    sql: 'INSERT INTO ad_managers (name, initials, email) VALUES (?, ?, NULL)',
+    args: [UNASSIGNED_MANAGER.name, UNASSIGNED_MANAGER.initials]
+  });
+  return Number(inserted.lastInsertRowid);
+}
+
+async function findOrCreateMerchant(db, merchantName) {
+  const name = merchantName.trim();
+  const found = await db.execute({
+    sql: 'SELECT id, ad_manager_id FROM merchants WHERE name = ? COLLATE NOCASE LIMIT 1',
+    args: [name]
+  });
+  if (found.rows[0]) {
+    return { id: found.rows[0].id, ad_manager_id: found.rows[0].ad_manager_id, created: false };
+  }
+
+  const fallbackManagerId = await getOrCreateUnassignedManagerId(db);
+  const mid = `WEB-${Date.now()}`;
+  const inserted = await db.execute({
+    sql: 'INSERT INTO merchants (mid, name, ad_manager_id) VALUES (?, ?, ?)',
+    args: [mid, name, fallbackManagerId]
+  });
+  return { id: Number(inserted.lastInsertRowid), ad_manager_id: fallbackManagerId, created: true };
+}
+
+app.post('/api/call-requests', async (req, res) => {
+  const db = getClient();
+  const merchantName = (req.body.merchantName || '').trim();
+  const reason = (req.body.reason || '').trim();
+
+  if (!merchantName || !reason) {
+    return res.status(400).json({ error: 'merchantName and reason are required' });
+  }
+
+  try {
+    await ensureCallRequestTag(db);
+    const merchant = await findOrCreateMerchant(db, merchantName);
+
+    const r = await db.execute({
+      sql: `INSERT INTO calls (merchant_id, ad_manager_id, reason_tag, notes, status, resolved)
+            VALUES (?, ?, ?, ?, 'reached', 1)`,
+      args: [merchant.id, merchant.ad_manager_id, CALL_REQUEST_TAG, reason]
+    });
+
+    res.status(201).json({
+      id: Number(r.lastInsertRowid),
+      merchant_id: merchant.id,
+      merchant_created: merchant.created
+    });
+  } catch (err) {
+    console.error('Failed to log call request:', err.message);
+    res.status(500).json({ error: 'Failed to log call request' });
+  }
+});
+
 // ---- Calls ------------------------------------------------------------
 
 function buildFilters({ range, manager, tag }) {
