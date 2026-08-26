@@ -5,6 +5,20 @@ const { getClient, initSchema } = require('./lib/db');
 
 const app = express();
 app.use(express.json());
+
+// The Merchant Issues form lives on a different Render origin and calls
+// POST /api/call-requests directly from the browser. Without these headers
+// the server still processes the request fine, but the browser blocks the
+// JS from ever seeing the response — which is exactly the "CRM logging
+// failed" symptom with no server-side error to match.
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET,POST,PATCH,OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type');
+  if (req.method === 'OPTIONS') return res.sendStatus(204);
+  next();
+});
+
 app.use(express.static(path.join(__dirname, 'public')));
 
 const DHAKA_TZ = 'Asia/Dhaka';
