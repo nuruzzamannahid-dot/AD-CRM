@@ -151,59 +151,88 @@ async function refreshPerformance() {
 
 async function refreshBreakdown() {
   const b = await api(`/api/breakdown?manager=${encodeURIComponent(state.manager)}`);
-  const container = $('breakdown');
-  container.innerHTML = '';
-  if (!b.rows.length) {
-    container.innerHTML = '<div class="panel-sub">No dissatisfaction tags logged yet.</div>';
-    return;
-  }
-  b.rows.forEach((row, i) => {
-    const div = document.createElement('div');
-    div.className = 'bar-row';
-    div.innerHTML = `
-      <div class="bar-top"><span>${row.sub_tag}</span><span>${row.pct}%</span></div>
-      <div class="bar-track"><div class="bar-fill ${i === 0 ? 'yellow' : ''}" style="width:${row.pct}%;"></div></div>
-    `;
-    container.appendChild(div);
+  const containers = document.querySelectorAll('.js-breakdown');
+  containers.forEach((container) => {
+    container.innerHTML = '';
+    if (!b.rows.length) {
+      container.innerHTML = '<div class="panel-sub">No dissatisfaction tags logged yet.</div>';
+      return;
+    }
+    b.rows.forEach((row, i) => {
+      const div = document.createElement('div');
+      div.className = 'bar-row';
+      div.innerHTML = `
+        <div class="bar-top"><span>${row.sub_tag}</span><span>${row.pct}%</span></div>
+        <div class="bar-track"><div class="bar-fill ${i === 0 ? 'yellow' : ''}" style="width:${row.pct}%;"></div></div>
+      `;
+      container.appendChild(div);
+    });
   });
 }
 
 async function refreshCallLog() {
   const params = new URLSearchParams({ range: state.range, manager: state.manager, tag: state.tag });
   const rows = await api(`/api/calls?${params.toString()}`);
-  const body = $('callLogBody');
+  const bodies = document.querySelectorAll('.js-call-log-body');
+  bodies.forEach((body) => {
+    body.innerHTML = '';
+    if (!rows.length) {
+      body.innerHTML = '<tr class="empty-row"><td colspan="5">No calls logged for this filter yet.</td></tr>';
+      return;
+    }
+    rows.forEach((c) => {
+      const tr = document.createElement('tr');
+
+      const tdMerchant = document.createElement('td');
+      tdMerchant.innerHTML = `<span class="merchant">${c.merchant_name}</span><br><span class="merchant-sub">${c.mid}</span>`;
+
+      const tdManager = document.createElement('td');
+      tdManager.appendChild(initialsColorAvatar(c.manager_initials));
+      tdManager.appendChild(document.createTextNode(c.manager_name));
+
+      const tdTag = document.createElement('td');
+      tdTag.innerHTML = `<span class="tag-pill ${tagPillClass(c.reason_tag)}">${c.reason_tag}</span>`;
+
+      const tdSub = document.createElement('td');
+      tdSub.innerHTML = c.sub_tag ? `<span class="tag-pill tag-neutral">${c.sub_tag}</span>` : '—';
+
+      const tdTime = document.createElement('td');
+      tdTime.textContent = fmtTime(c.created_at);
+
+      tr.append(tdMerchant, tdManager, tdTag, tdSub, tdTime);
+      body.appendChild(tr);
+    });
+  });
+}
+
+async function refreshFunnel() {
+  const f = await api(`/api/funnel?manager=${encodeURIComponent(state.manager)}`);
+  $('funnelAssigned').textContent = f.assigned;
+  $('funnelCalled').textContent = f.called;
+  $('funnelReached').textContent = f.reached;
+  $('funnelDissatisfied').textContent = f.dissatisfied;
+  $('funnelResolved').textContent = f.resolved;
+}
+
+async function refreshMerchantDirectory(query = '') {
+  const body = $('merchantDirectoryBody');
+  body.innerHTML = '<tr class="empty-row"><td colspan="2">Loading…</td></tr>';
+  const results = await api(`/api/merchants?search=${encodeURIComponent(query)}`);
   body.innerHTML = '';
-  if (!rows.length) {
-    body.innerHTML = '<tr class="empty-row"><td colspan="5">No calls logged for this filter yet.</td></tr>';
+  if (!results.length) {
+    body.innerHTML = '<tr class="empty-row"><td colspan="2">No merchants found.</td></tr>';
     return;
   }
-  rows.forEach((c) => {
+  results.forEach((m) => {
     const tr = document.createElement('tr');
-
-    const tdMerchant = document.createElement('td');
-    tdMerchant.innerHTML = `<span class="merchant">${c.merchant_name}</span><br><span class="merchant-sub">${c.mid}</span>`;
-
-    const tdManager = document.createElement('td');
-    tdManager.appendChild(initialsColorAvatar(c.manager_initials));
-    tdManager.appendChild(document.createTextNode(c.manager_name));
-
-    const tdTag = document.createElement('td');
-    tdTag.innerHTML = `<span class="tag-pill ${tagPillClass(c.reason_tag)}">${c.reason_tag}</span>`;
-
-    const tdSub = document.createElement('td');
-    tdSub.innerHTML = c.sub_tag ? `<span class="tag-pill tag-neutral">${c.sub_tag}</span>` : '—';
-
-    const tdTime = document.createElement('td');
-    tdTime.textContent = fmtTime(c.created_at);
-
-    tr.append(tdMerchant, tdManager, tdTag, tdSub, tdTime);
+    tr.innerHTML = `<td>${m.name}</td><td>${m.mid}</td>`;
     body.appendChild(tr);
   });
 }
 
 async function refreshAll() {
   await refreshTopbar();
-  await Promise.all([refreshMetrics(), refreshPerformance(), refreshBreakdown(), refreshCallLog()]);
+  await Promise.all([refreshMetrics(), refreshPerformance(), refreshBreakdown(), refreshCallLog(), refreshFunnel()]);
 }
 
 // ---- Merchant search ------------------------------------------------------
@@ -266,6 +295,7 @@ $('callForm').addEventListener('submit', async (e) => {
   $('callForm').reset();
   $('merchantId').value = '';
   $('subTagBox').classList.remove('show');
+  closeEntryForm();
   await refreshAll();
 });
 
@@ -276,6 +306,68 @@ $('managerSelect').addEventListener('change', (e) => { state.manager = e.target.
 
 document.addEventListener('click', (e) => {
   if (!$('merchantResults').contains(e.target)) $('merchantDropdown').style.display = 'none';
+});
+
+// ---- Sidebar navigation -----------------------------------------------------
+
+const VIEW_TITLES = {
+  dashboard: 'Daily call tracking dashboard',
+  calllog: 'Call log',
+  adperf: 'AD performance',
+  dissatisfaction: 'Dissatisfaction tags',
+  merchants: 'Merchant directory',
+  admanagerperf: 'AD manager performance'
+};
+
+let merchantDirectoryLoaded = false;
+
+function showView(viewKey) {
+  document.querySelectorAll('.nav-item').forEach((item) => {
+    item.classList.toggle('active', item.dataset.view === viewKey);
+  });
+  document.querySelectorAll('.view').forEach((view) => {
+    view.classList.toggle('active', view.id === `view-${viewKey}`);
+  });
+  $('pageTitle').textContent = VIEW_TITLES[viewKey] || VIEW_TITLES.dashboard;
+
+  if (viewKey === 'merchants' && !merchantDirectoryLoaded) {
+    merchantDirectoryLoaded = true;
+    refreshMerchantDirectory('');
+  }
+}
+
+$('sideNav').addEventListener('click', (e) => {
+  const item = e.target.closest('.nav-item');
+  if (!item) return;
+  showView(item.dataset.view);
+});
+
+// ---- Merchant directory search ----------------------------------------------
+
+let directorySearchTimeout;
+$('merchantDirectorySearch').addEventListener('input', (e) => {
+  clearTimeout(directorySearchTimeout);
+  const q = e.target.value.trim();
+  directorySearchTimeout = setTimeout(() => refreshMerchantDirectory(q), 200);
+});
+
+// ---- New call entry modal ----------------------------------------------------
+
+function openEntryForm() {
+  $('entryFormWrap').classList.add('show');
+}
+
+function closeEntryForm() {
+  $('entryFormWrap').classList.remove('show');
+}
+
+$('openFormBtn').addEventListener('click', openEntryForm);
+$('closeFormBtn').addEventListener('click', closeEntryForm);
+$('cancelFormBtn').addEventListener('click', closeEntryForm);
+
+// Clicking the dimmed backdrop (outside the form card) closes the modal too
+$('entryFormWrap').addEventListener('click', (e) => {
+  if (e.target === $('entryFormWrap')) closeEntryForm();
 });
 
 // ---- Boot -----------------------------------------------------------------
