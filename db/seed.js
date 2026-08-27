@@ -5,15 +5,15 @@ require('dotenv').config();
 const { getClient, initSchema } = require('../lib/db');
 
 const REASON_TAGS = [
-  'FB boost', 'Market closure', 'Stock / production issue', 'Regular fluctuation',
-  'Dissatisfied', 'Registered but not interested right now', 'Unidentified',
-  'Newly onboarded', 'Business inactive', 'Project', 'API', 'Election impact',
-  'Pickup closed on mgt decision', 'Campaign off', 'Active from alternative account', 'Rate'
+  'FB Boost', 'Market Closure', 'Stock / Production Issue', 'Regular Fluctuation',
+  'Dissatisfied', 'Registered but Not Interested Right Now', 'Unidentified',
+  'Newly Onboarded', 'Business Inactive', 'Project', 'API', 'Election Impact',
+  'Pickup Closed on MGT Decision', 'Campaign Off', 'Active from Alternative Account', 'Rate'
 ];
 
 const SUBTAGS = [
-  'Delivery delay', 'Return delay', 'MP issue', 'Rate issue', 'Payment issue',
-  'Fake return', 'High return', 'OTP issue', 'Damage issue', 'Pickup issue', 'Adjustment issue'
+  'Delivery Delay', 'Return Delay', 'MP Issue', 'Rate Issue', 'Payment Issue',
+  'Fake Return', 'High Return', 'OTP Issue', 'Damage Issue', 'Pickup Issue', 'Adjustment Issue'
 ];
 
 const MANAGERS = [
