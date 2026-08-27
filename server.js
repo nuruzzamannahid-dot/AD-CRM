@@ -85,7 +85,7 @@ app.get('/api/merchants', async (req, res) => {
   const db = getClient();
   const search = `%${(req.query.search || '').trim()}%`;
   const r = await db.execute({
-    sql: 'SELECT id, mid, name FROM merchants WHERE name LIKE ? OR mid LIKE ? ORDER BY name LIMIT 20',
+    sql: 'SELECT id, mid, name, whatsapp_number FROM merchants WHERE name LIKE ? OR mid LIKE ? ORDER BY name LIMIT 20',
     args: [search, search]
   });
   res.json(r.rows);
