@@ -82,14 +82,6 @@
   .panel h2{ font-size:14.5px; margin:0 0 2px; }
   .panel .panel-sub{ font-size:11.5px; color:var(--cb-text-muted); margin-bottom:14px; }
 
-  /* Funnel */
-  .funnel{ display:flex; align-items:stretch; gap:4px; }
-  .funnel-step{ flex:1; text-align:center; }
-  .funnel-bar{ background:var(--cb-black); color:#fff; border-radius:8px 8px 0 0; padding:14px 6px 10px; font-weight:700; font-size:15px; }
-  .funnel-bar.yellow{ background:var(--cb-yellow); color:var(--cb-black); }
-  .funnel-label{ font-size:10.5px; color:var(--cb-text-muted); padding:6px 4px 0; line-height:1.3; }
-  .funnel-arrow{ display:flex; align-items:center; color:#c8c6bd; font-size:14px; padding-bottom:14px; }
-
   /* Table */
   table{ width:100%; border-collapse:collapse; font-size:12px; }
   th{ text-align:left; font-size:10.5px; text-transform:uppercase; letter-spacing:.03em; color:var(--cb-text-muted);
@@ -157,7 +149,6 @@
     <div class="nav" id="sideNav">
       <div class="nav-item active" data-view="dashboard"><span class="dot"></span>Dashboard</div>
       <div class="nav-item" data-view="calllog"><span class="dot"></span>Call log</div>
-      <div class="nav-item" data-view="adperf"><span class="dot"></span>AD performance</div>
       <div class="nav-item" data-view="dissatisfaction"><span class="dot"></span>Dissatisfaction tags</div>
       <div class="nav-item" data-view="merchants"><span class="dot"></span>Merchant directory</div>
       <div class="nav-item" data-view="admanagerperf"><span class="dot"></span>AD manager performance</div>
@@ -257,40 +248,6 @@
       </div>
     </div>
 
-    <!-- ================= AD PERFORMANCE VIEW (funnel) ================= -->
-    <div class="view" id="view-adperf">
-      <div class="panel">
-        <h2>AD performance funnel</h2>
-        <div class="panel-sub">Merchant funnel for the selected manager, today</div>
-        <div class="funnel" id="funnel">
-          <div class="funnel-step">
-            <div class="funnel-bar" id="funnelAssigned">—</div>
-            <div class="funnel-label">Assigned</div>
-          </div>
-          <div class="funnel-arrow">→</div>
-          <div class="funnel-step">
-            <div class="funnel-bar" id="funnelCalled">—</div>
-            <div class="funnel-label">Called</div>
-          </div>
-          <div class="funnel-arrow">→</div>
-          <div class="funnel-step">
-            <div class="funnel-bar" id="funnelReached">—</div>
-            <div class="funnel-label">Reached</div>
-          </div>
-          <div class="funnel-arrow">→</div>
-          <div class="funnel-step">
-            <div class="funnel-bar yellow" id="funnelDissatisfied">—</div>
-            <div class="funnel-label">Dissatisfied</div>
-          </div>
-          <div class="funnel-arrow">→</div>
-          <div class="funnel-step">
-            <div class="funnel-bar" id="funnelResolved">—</div>
-            <div class="funnel-label">Resolved</div>
-          </div>
-        </div>
-      </div>
-    </div>
-
     <!-- ================= DISSATISFACTION TAGS VIEW ================= -->
     <div class="view" id="view-dissatisfaction">
       <div class="panel">
@@ -310,9 +267,9 @@
         <input type="text" id="merchantDirectorySearch" placeholder="Search merchants…" autocomplete="off"
                style="width:100%; padding:9px 10px; font-size:12.5px; border:1px solid var(--cb-border); border-radius:7px; background:#fbfbf9; margin-bottom:14px;">
         <table>
-          <tr><th>Name</th><th>MID</th></tr>
+          <tr><th>Name</th><th>MID</th><th>Phone</th></tr>
           <tbody id="merchantDirectoryBody">
-            <tr class="empty-row"><td colspan="2">Type to search…</td></tr>
+            <tr class="empty-row"><td colspan="3">Type to search…</td></tr>
           </tbody>
         </table>
       </div>
