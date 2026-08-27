@@ -254,10 +254,10 @@ app.get('/api/metrics', async (req, res) => {
     db.execute({ sql: `SELECT COUNT(*) c FROM calls c JOIN ad_managers m ON m.id=c.ad_manager_id WHERE ${yWhere}`, args: yArgs }),
     db.execute({ sql: `SELECT COUNT(*) c FROM calls c JOIN ad_managers m ON m.id=c.ad_manager_id WHERE ${todayFilters.where} AND c.reason_tag='Dissatisfied'`, args: todayFilters.args }),
     db.execute({ sql: `SELECT COUNT(*) c FROM calls c JOIN ad_managers m ON m.id=c.ad_manager_id WHERE ${yWhere} AND c.reason_tag='Dissatisfied'`, args: yArgs }),
-    db.execute({ sql: `SELECT COUNT(*) c FROM calls c JOIN ad_managers m ON m.id=c.ad_manager_id WHERE ${todayFilters.where} AND c.reason_tag='Newly onboarded'`, args: todayFilters.args }),
-    db.execute({ sql: `SELECT COUNT(*) c FROM calls c JOIN ad_managers m ON m.id=c.ad_manager_id WHERE ${yWhere} AND c.reason_tag='Newly onboarded'`, args: yArgs }),
-    db.execute({ sql: `SELECT COUNT(*) c FROM calls c JOIN ad_managers m ON m.id=c.ad_manager_id WHERE ${todayFilters.where} AND c.reason_tag='Business inactive'`, args: todayFilters.args }),
-    db.execute({ sql: `SELECT COUNT(*) c FROM calls c JOIN ad_managers m ON m.id=c.ad_manager_id WHERE ${yWhere} AND c.reason_tag='Business inactive'`, args: yArgs })
+    db.execute({ sql: `SELECT COUNT(*) c FROM calls c JOIN ad_managers m ON m.id=c.ad_manager_id WHERE ${todayFilters.where} AND c.reason_tag='Newly Onboarded'`, args: todayFilters.args }),
+    db.execute({ sql: `SELECT COUNT(*) c FROM calls c JOIN ad_managers m ON m.id=c.ad_manager_id WHERE ${yWhere} AND c.reason_tag='Newly Onboarded'`, args: yArgs }),
+    db.execute({ sql: `SELECT COUNT(*) c FROM calls c JOIN ad_managers m ON m.id=c.ad_manager_id WHERE ${todayFilters.where} AND c.reason_tag='Business Inactive'`, args: todayFilters.args }),
+    db.execute({ sql: `SELECT COUNT(*) c FROM calls c JOIN ad_managers m ON m.id=c.ad_manager_id WHERE ${yWhere} AND c.reason_tag='Business Inactive'`, args: yArgs })
   ]);
 
   const callsToday = Number(calls.rows[0].c);
