@@ -205,34 +205,25 @@ async function refreshCallLog() {
   });
 }
 
-async function refreshFunnel() {
-  const f = await api(`/api/funnel?manager=${encodeURIComponent(state.manager)}`);
-  $('funnelAssigned').textContent = f.assigned;
-  $('funnelCalled').textContent = f.called;
-  $('funnelReached').textContent = f.reached;
-  $('funnelDissatisfied').textContent = f.dissatisfied;
-  $('funnelResolved').textContent = f.resolved;
-}
-
 async function refreshMerchantDirectory(query = '') {
   const body = $('merchantDirectoryBody');
-  body.innerHTML = '<tr class="empty-row"><td colspan="2">Loading…</td></tr>';
+  body.innerHTML = '<tr class="empty-row"><td colspan="3">Loading…</td></tr>';
   const results = await api(`/api/merchants?search=${encodeURIComponent(query)}`);
   body.innerHTML = '';
   if (!results.length) {
-    body.innerHTML = '<tr class="empty-row"><td colspan="2">No merchants found.</td></tr>';
+    body.innerHTML = '<tr class="empty-row"><td colspan="3">No merchants found.</td></tr>';
     return;
   }
   results.forEach((m) => {
     const tr = document.createElement('tr');
-    tr.innerHTML = `<td>${m.name}</td><td>${m.mid}</td>`;
+    tr.innerHTML = `<td>${m.name}</td><td>${m.mid}</td><td>${m.whatsapp_number || '—'}</td>`;
     body.appendChild(tr);
   });
 }
 
 async function refreshAll() {
   await refreshTopbar();
-  await Promise.all([refreshMetrics(), refreshPerformance(), refreshBreakdown(), refreshCallLog(), refreshFunnel()]);
+  await Promise.all([refreshMetrics(), refreshPerformance(), refreshBreakdown(), refreshCallLog()]);
 }
 
 // ---- Merchant search ------------------------------------------------------
@@ -313,7 +304,6 @@ document.addEventListener('click', (e) => {
 const VIEW_TITLES = {
   dashboard: 'Daily call tracking dashboard',
   calllog: 'Call log',
-  adperf: 'AD performance',
   dissatisfaction: 'Dissatisfaction tags',
   merchants: 'Merchant directory',
   admanagerperf: 'AD manager performance'
