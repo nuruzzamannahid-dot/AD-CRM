@@ -19,8 +19,8 @@ function initialsColorAvatar(initials) {
 
 function tagPillClass(tag) {
   if (tag === 'Dissatisfied') return 'tag-red';
-  if (tag === 'FB boost') return 'tag-green';
-  if (tag === 'Newly onboarded') return 'tag-yellow';
+  if (tag === 'FB Boost') return 'tag-green';
+  if (tag === 'Newly Onboarded') return 'tag-yellow';
   return 'tag-neutral';
 }
 
