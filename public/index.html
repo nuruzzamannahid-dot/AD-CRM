@@ -46,6 +46,15 @@
   .nav-item.active .dot{ background:var(--cb-yellow); }
   .sidebar-foot{ margin-top:auto; padding:16px 20px; font-size:11px; color:#7a7a76; border-top:1px solid #2c2c2c; }
 
+  /* View switching */
+  .view{ display:none; }
+  .view.active{ display:block; }
+
+  /* Real modal overlay (was a static inline mock before) */
+  .modal-backdrop{ display:none; position:fixed; inset:0; background:rgba(24,24,24,.45); align-items:center; justify-content:center; z-index:50; }
+  .modal-backdrop.show{ display:flex; }
+  .modal-backdrop .modal-wrap{ margin-top:0; width:480px; max-width:92vw; max-height:86vh; overflow-y:auto; }
+
   /* Main */
   .main{ flex:1; padding:24px 32px 48px; max-width:1180px; }
   .topbar{ display:flex; align-items:center; justify-content:space-between; margin-bottom:22px; }
@@ -136,6 +145,7 @@
 </style>
 </head>
 <body>
+
 <div class="app">
 
   <!-- Sidebar -->
@@ -144,13 +154,13 @@
       <div class="logo-mark">CB</div>
       <div class="logo-text">CarryBee<span>AD CRM</span></div>
     </div>
-    <div class="nav">
-      <div class="nav-item active"><span class="dot"></span>Dashboard</div>
-      <div class="nav-item"><span class="dot"></span>Call log</div>
-      <div class="nav-item"><span class="dot"></span>AD performance</div>
-      <div class="nav-item"><span class="dot"></span>Dissatisfaction tags</div>
-      <div class="nav-item"><span class="dot"></span>Merchant directory</div>
-      <div class="nav-item"><span class="dot"></span>AD manager performance</div>
+    <div class="nav" id="sideNav">
+      <div class="nav-item active" data-view="dashboard"><span class="dot"></span>Dashboard</div>
+      <div class="nav-item" data-view="calllog"><span class="dot"></span>Call log</div>
+      <div class="nav-item" data-view="adperf"><span class="dot"></span>AD performance</div>
+      <div class="nav-item" data-view="dissatisfaction"><span class="dot"></span>Dissatisfaction tags</div>
+      <div class="nav-item" data-view="merchants"><span class="dot"></span>Merchant directory</div>
+      <div class="nav-item" data-view="admanagerperf"><span class="dot"></span>AD manager performance</div>
     </div>
     <div class="sidebar-foot">Account Development Team<br>Strategy &amp; Performance Mgmt.</div>
   </div>
@@ -160,7 +170,7 @@
 
     <div class="topbar">
       <div>
-        <h1>Daily call tracking dashboard</h1>
+        <h1 id="pageTitle">Daily call tracking dashboard</h1>
         <div class="sub" id="topbarSub">Loading…</div>
       </div>
       <div class="topbar-right">
@@ -176,134 +186,214 @@
       </div>
     </div>
 
-    <!-- Metric cards -->
-    <div class="metrics" id="metrics">
-      <div class="metric-card">
-        <div class="label">Calls logged today</div>
-        <div class="value" id="mCalls">—</div>
-        <div class="delta" id="mCallsDelta"></div>
+    <!-- ================= DASHBOARD VIEW ================= -->
+    <div class="view active" id="view-dashboard">
+
+      <div class="metrics" id="metrics">
+        <div class="metric-card">
+          <div class="label">Calls logged today</div>
+          <div class="value" id="mCalls">—</div>
+          <div class="delta" id="mCallsDelta"></div>
+        </div>
+        <div class="metric-card">
+          <div class="label">Dissatisfaction rate</div>
+          <div class="value" id="mDissat">—</div>
+          <div class="delta" id="mDissatDelta"></div>
+        </div>
+        <div class="metric-card">
+          <div class="label">Newly onboarded tagged</div>
+          <div class="value" id="mOnboard">—</div>
+          <div class="delta" id="mOnboardDelta"></div>
+        </div>
+        <div class="metric-card">
+          <div class="label">Business inactive tagged</div>
+          <div class="value" id="mInactive">—</div>
+          <div class="delta" id="mInactiveDelta"></div>
+        </div>
       </div>
-      <div class="metric-card">
-        <div class="label">Dissatisfaction rate</div>
-        <div class="value" id="mDissat">—</div>
-        <div class="delta" id="mDissatDelta"></div>
+
+      <div class="grid2">
+        <div class="panel">
+          <h2>Recent call log</h2>
+          <div class="panel-sub">Live entries from AD managers</div>
+          <table>
+            <tr><th>Merchant</th><th>AD manager</th><th>Reason tag</th><th>Sub-tag</th><th>Time</th></tr>
+            <tbody class="js-call-log-body">
+              <tr class="empty-row"><td colspan="5">Loading…</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="panel">
+          <h2>Dissatisfaction breakdown</h2>
+          <div class="panel-sub">Sub-tag share, today</div>
+          <div class="js-breakdown">
+            <div class="bar-row"><div class="bar-top"><span>Loading…</span></div></div>
+          </div>
+        </div>
       </div>
-      <div class="metric-card">
-        <div class="label">Newly onboarded tagged</div>
-        <div class="value" id="mOnboard">—</div>
-        <div class="delta" id="mOnboardDelta"></div>
+
+      <div class="panel" style="margin-bottom:16px;">
+        <h2>Reason for call tags</h2>
+        <div class="panel-sub">Selected on every call entry — filters the log and dashboard above</div>
+        <div class="chip-row" id="chipRow">
+          <span class="chip active" data-tag="All">All</span>
+        </div>
       </div>
-      <div class="metric-card">
-        <div class="label">Business inactive tagged</div>
-        <div class="value" id="mInactive">—</div>
-        <div class="delta" id="mInactiveDelta"></div>
-      </div>
+
     </div>
 
-    <!-- AD Performance -->
-    <div class="panel" style="margin-bottom:16px;">
-      <h2>AD manager performance</h2>
-      <div class="panel-sub">Calls, reach rate, and dissatisfaction resolution by manager for the selected range</div>
-      <table>
-        <thead>
-          <tr>
-            <th>Manager</th>
-            <th>Calls</th>
-            <th>Reached</th>
-            <th>Reach rate</th>
-            <th>Dissatisfied</th>
-            <th>Resolved</th>
-            <th>Resolution rate</th>
-          </tr>
-        </thead>
-        <tbody id="performanceBody"></tbody>
-      </table>
-    </div>
-
-    <div class="grid2">
-      <!-- Call log -->
+    <!-- ================= CALL LOG VIEW ================= -->
+    <div class="view" id="view-calllog">
       <div class="panel">
-        <h2>Recent call log</h2>
-        <div class="panel-sub">Live entries from AD managers</div>
+        <h2>Call log</h2>
+        <div class="panel-sub">All logged calls for the selected range, manager and tag filter</div>
         <table>
           <tr><th>Merchant</th><th>AD manager</th><th>Reason tag</th><th>Sub-tag</th><th>Time</th></tr>
-          <tbody id="callLogBody">
+          <tbody class="js-call-log-body">
             <tr class="empty-row"><td colspan="5">Loading…</td></tr>
           </tbody>
         </table>
       </div>
+    </div>
 
-      <!-- Dissatisfaction breakdown -->
+    <!-- ================= AD PERFORMANCE VIEW (funnel) ================= -->
+    <div class="view" id="view-adperf">
+      <div class="panel">
+        <h2>AD performance funnel</h2>
+        <div class="panel-sub">Merchant funnel for the selected manager, today</div>
+        <div class="funnel" id="funnel">
+          <div class="funnel-step">
+            <div class="funnel-bar" id="funnelAssigned">—</div>
+            <div class="funnel-label">Assigned</div>
+          </div>
+          <div class="funnel-arrow">→</div>
+          <div class="funnel-step">
+            <div class="funnel-bar" id="funnelCalled">—</div>
+            <div class="funnel-label">Called</div>
+          </div>
+          <div class="funnel-arrow">→</div>
+          <div class="funnel-step">
+            <div class="funnel-bar" id="funnelReached">—</div>
+            <div class="funnel-label">Reached</div>
+          </div>
+          <div class="funnel-arrow">→</div>
+          <div class="funnel-step">
+            <div class="funnel-bar yellow" id="funnelDissatisfied">—</div>
+            <div class="funnel-label">Dissatisfied</div>
+          </div>
+          <div class="funnel-arrow">→</div>
+          <div class="funnel-step">
+            <div class="funnel-bar" id="funnelResolved">—</div>
+            <div class="funnel-label">Resolved</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================= DISSATISFACTION TAGS VIEW ================= -->
+    <div class="view" id="view-dissatisfaction">
       <div class="panel">
         <h2>Dissatisfaction breakdown</h2>
-        <div class="panel-sub">Sub-tag share, today</div>
-        <div id="breakdown">
+        <div class="panel-sub">Sub-tag share for the selected manager, today</div>
+        <div class="js-breakdown">
           <div class="bar-row"><div class="bar-top"><span>Loading…</span></div></div>
         </div>
       </div>
     </div>
 
-    <!-- Reason tag chip legend -->
-    <div class="panel" style="margin-bottom:16px;">
-      <h2>Reason for call tags</h2>
-      <div class="panel-sub">Selected on every call entry — filters the log and dashboard above</div>
-      <div class="chip-row" id="chipRow">
-        <span class="chip active" data-tag="All">All</span>
+    <!-- ================= MERCHANT DIRECTORY VIEW ================= -->
+    <div class="view" id="view-merchants">
+      <div class="panel">
+        <h2>Merchant directory</h2>
+        <div class="panel-sub">Search by merchant name or MID</div>
+        <input type="text" id="merchantDirectorySearch" placeholder="Search merchants…" autocomplete="off"
+               style="width:100%; padding:9px 10px; font-size:12.5px; border:1px solid var(--cb-border); border-radius:7px; background:#fbfbf9; margin-bottom:14px;">
+        <table>
+          <tr><th>Name</th><th>MID</th></tr>
+          <tbody id="merchantDirectoryBody">
+            <tr class="empty-row"><td colspan="2">Type to search…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ================= AD MANAGER PERFORMANCE VIEW ================= -->
+    <div class="view" id="view-admanagerperf">
+      <div class="panel">
+        <h2>AD manager performance</h2>
+        <div class="panel-sub">Calls, reach rate, and dissatisfaction resolution by manager for the selected range</div>
+        <table>
+          <thead>
+            <tr>
+              <th>Manager</th>
+              <th>Calls</th>
+              <th>Reached</th>
+              <th>Reach rate</th>
+              <th>Dissatisfied</th>
+              <th>Resolved</th>
+              <th>Resolution rate</th>
+            </tr>
+          </thead>
+          <tbody id="performanceBody"></tbody>
+        </table>
       </div>
     </div>
 
     <!-- New call entry form -->
-    <div class="modal-wrap" id="entryFormWrap">
-      <div class="modal-label">New call entry</div>
-      <form class="modal" id="callForm">
-        <div class="modal-head">
-          <h3>Log a call</h3>
-          <span style="font-size:12px; color:#c9c9c9; cursor:pointer;" id="closeFormBtn">✕</span>
-        </div>
-        <div class="modal-body">
-          <div class="form-row">
-            <div class="field" id="merchantResults">
-              <label>Merchant</label>
-              <input type="text" id="merchantSearch" placeholder="Search merchant / MID…" autocomplete="off">
-              <input type="hidden" id="merchantId">
-              <div class="merchant-dropdown" id="merchantDropdown"></div>
-            </div>
-            <div class="field">
-              <label>AD manager</label>
-              <select id="formManager" required></select>
-            </div>
+    <div class="modal-backdrop" id="entryFormWrap">
+      <div class="modal-wrap">
+        <div class="modal-label">New call entry</div>
+        <form class="modal" id="callForm">
+          <div class="modal-head">
+            <h3>Log a call</h3>
+            <span style="font-size:12px; color:#c9c9c9; cursor:pointer;" id="closeFormBtn">✕</span>
           </div>
-          <div class="form-row">
-            <div class="field">
-              <label>Reason for call tag</label>
-              <select id="formReasonTag" required>
-                <option value="">Select a tag…</option>
-              </select>
+          <div class="modal-body">
+            <div class="form-row">
+              <div class="field" id="merchantResults">
+                <label>Merchant</label>
+                <input type="text" id="merchantSearch" placeholder="Search merchant / MID…" autocomplete="off">
+                <input type="hidden" id="merchantId">
+                <div class="merchant-dropdown" id="merchantDropdown"></div>
+              </div>
+              <div class="field">
+                <label>AD manager</label>
+                <select id="formManager" required></select>
+              </div>
             </div>
-            <div class="field">
-              <label>Follow-up date</label>
-              <input type="date" id="formFollowUp">
+            <div class="form-row">
+              <div class="field">
+                <label>Reason for call tag</label>
+                <select id="formReasonTag" required>
+                  <option value="">Select a tag…</option>
+                </select>
+              </div>
+              <div class="field">
+                <label>Follow-up date</label>
+                <input type="date" id="formFollowUp">
+              </div>
             </div>
-          </div>
 
-          <div class="sub-tag-box" id="subTagBox">
-            <div class="modal-label">Dissatisfaction sub-tag — shown only when "Dissatisfied" is selected</div>
-            <div class="sub-tag-chips" id="subTagChips"></div>
-            <input type="hidden" id="formSubTag">
-          </div>
+            <div class="sub-tag-box" id="subTagBox">
+              <div class="modal-label">Dissatisfaction sub-tag — shown only when "Dissatisfied" is selected</div>
+              <div class="sub-tag-chips" id="subTagChips"></div>
+              <input type="hidden" id="formSubTag">
+            </div>
 
-          <div class="form-row">
-            <div class="field full">
-              <label>Call notes</label>
-              <input type="text" id="formNotes" placeholder="Short summary of the call…">
+            <div class="form-row">
+              <div class="field full">
+                <label>Call notes</label>
+                <input type="text" id="formNotes" placeholder="Short summary of the call…">
+              </div>
             </div>
           </div>
-        </div>
-        <div class="modal-foot">
-          <button type="button" class="btn-ghost" id="cancelFormBtn">Cancel</button>
-          <button type="submit" class="btn-primary">Save entry</button>
-        </div>
-      </form>
+          <div class="modal-foot">
+            <button type="button" class="btn-ghost" id="cancelFormBtn">Cancel</button>
+            <button type="submit" class="btn-primary">Save entry</button>
+          </div>
+        </form>
+      </div>
     </div>
 
   </div>
