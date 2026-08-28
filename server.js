@@ -384,7 +384,7 @@ function startMerchantSyncLoop() {
 
 initSchema()
   .then(() => {
-    app.listen(PORT, () => console.log(`AD CRM running on http://localhost:${PORT}`));
+    app.listen(PORT, () => console.log(`Flight Log running on http://localhost:${PORT}`));
     startMerchantSyncLoop();
   })
   .catch((err) => {
