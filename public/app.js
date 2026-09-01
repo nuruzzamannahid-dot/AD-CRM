@@ -292,7 +292,11 @@ $('callForm').addEventListener('submit', async (e) => {
 
 // ---- Top filters -----------------------------------------------------------
 
-$('rangeSelect').addEventListener('change', (e) => { state.range = e.target.value; refreshAll(); });
+document.querySelectorAll('input[name="range"]').forEach(radio => {
+  radio.addEventListener('change', (e) => {
+    if (e.target.checked) { state.range = e.target.value; refreshAll(); }
+  });
+});
 $('managerSelect').addEventListener('change', (e) => { state.manager = e.target.value; refreshAll(); });
 
 document.addEventListener('click', (e) => {
