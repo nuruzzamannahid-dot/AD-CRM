@@ -62,6 +62,30 @@
   .topbar .sub{ font-size:12.5px; color:var(--cb-text-muted); }
   .topbar-right{ display:flex; align-items:center; gap:10px; }
   .select{ font-size:12.5px; padding:8px 12px; border-radius:8px; border:1px solid var(--cb-border); background:#fff; color:var(--cb-text); }
+
+  /* Range toggle — replaces the old <select> */
+  .range-toggle{
+    display:flex; position:relative;
+    background:var(--cb-black); border-radius:8px;
+    overflow:hidden; width:fit-content;
+  }
+  .range-toggle input{ display:none; }
+  .range-toggle label{
+    flex:1; display:flex; align-items:center; justify-content:center;
+    min-width:66px; font-size:12.5px; font-weight:600;
+    padding:9px 14px; cursor:pointer; color:#c9c9c9;
+    position:relative; z-index:2; transition:color .3s ease;
+  }
+  .range-toggle label:hover{ color:#fff; }
+  .range-toggle input:checked + label{ color:var(--cb-black); }
+  .range-glider{
+    position:absolute; top:0; bottom:0; width:calc(100% / 3);
+    border-radius:8px; background:var(--cb-yellow); z-index:1;
+    transition:transform .4s cubic-bezier(.37,1.95,.66,.56);
+  }
+  #range-today:checked ~ .range-glider{ transform:translateX(0%); }
+  #range-week:checked ~ .range-glider{ transform:translateX(100%); }
+  #range-month:checked ~ .range-glider{ transform:translateX(200%); }
   .btn-primary{
     background:var(--cb-yellow); color:var(--cb-black); border:none; font-weight:700;
     font-size:12.5px; padding:10px 16px; border-radius:8px; cursor:pointer; display:flex; align-items:center; gap:6px;
@@ -165,11 +189,15 @@
         <div class="sub" id="topbarSub">Loading…</div>
       </div>
       <div class="topbar-right">
-        <select class="select" id="rangeSelect">
-          <option value="today">Today</option>
-          <option value="week">This week</option>
-          <option value="month">This month</option>
-        </select>
+        <div class="range-toggle">
+          <input type="radio" name="range" id="range-today" value="today" checked>
+          <label for="range-today">Today</label>
+          <input type="radio" name="range" id="range-week" value="week">
+          <label for="range-week">This week</label>
+          <input type="radio" name="range" id="range-month" value="month">
+          <label for="range-month">This month</label>
+          <div class="range-glider"></div>
+        </div>
         <select class="select" id="managerSelect">
           <option value="all">All AD managers</option>
         </select>
