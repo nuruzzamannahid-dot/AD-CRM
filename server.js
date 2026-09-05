@@ -331,31 +331,54 @@ app.get('/api/performance', async (req, res) => {
   const range = req.query.range || 'today';
   const { start, end } = rangeToDates(range);
 
-  const r = await db.execute({
-    sql: `
-      SELECT m.name AS manager_name, m.initials AS manager_initials,
-             COUNT(c.id) AS calls,
-             SUM(CASE WHEN c.reason_tag = 'Dissatisfied' THEN 1 ELSE 0 END) AS dissatisfied,
-             SUM(CASE WHEN c.reason_tag = 'Dissatisfied' AND c.resolved = 1 THEN 1 ELSE 0 END) AS resolved,
-             SUM(CASE WHEN c.status = 'reached' THEN 1 ELSE 0 END) AS reached
-      FROM ad_managers m
-      LEFT JOIN calls c ON c.ad_manager_id = m.id AND date(c.created_at) BETWEEN ? AND ?
-      WHERE m.name != 'Unassigned'
-      GROUP BY m.id
-      ORDER BY m.name
-    `,
-    args: [start, end]
-  });
+  // Day-over-day comparison: always yesterday's single Dhaka calendar day,
+  // regardless of which range ('today'/'week'/'month') is selected — this
+  // mirrors the "vs yesterday" deltas already shown on the metrics cards.
+  const yesterdayKey = dhakaDateKey(new Date(Date.now() - 86400000));
+
+  const [r, ry] = await Promise.all([
+    db.execute({
+      sql: `
+        SELECT m.id AS manager_id, m.name AS manager_name, m.initials AS manager_initials,
+               COUNT(c.id) AS calls,
+               SUM(CASE WHEN c.reason_tag = 'Dissatisfied' THEN 1 ELSE 0 END) AS dissatisfied,
+               SUM(CASE WHEN c.reason_tag = 'Dissatisfied' AND c.resolved = 1 THEN 1 ELSE 0 END) AS resolved,
+               SUM(CASE WHEN c.status = 'reached' THEN 1 ELSE 0 END) AS reached
+        FROM ad_managers m
+        LEFT JOIN calls c ON c.ad_manager_id = m.id AND date(c.created_at) BETWEEN ? AND ?
+        WHERE m.name != 'Unassigned'
+        GROUP BY m.id
+        ORDER BY m.name
+      `,
+      args: [start, end]
+    }),
+    db.execute({
+      sql: `
+        SELECT m.id AS manager_id, COUNT(c.id) AS calls
+        FROM ad_managers m
+        LEFT JOIN calls c ON c.ad_manager_id = m.id AND date(c.created_at) = ?
+        WHERE m.name != 'Unassigned'
+        GROUP BY m.id
+      `,
+      args: [yesterdayKey]
+    })
+  ]);
+
+  const yesterdayByManager = {};
+  ry.rows.forEach((row) => { yesterdayByManager[row.manager_id] = Number(row.calls); });
 
   const rows = r.rows.map((row) => {
     const calls = Number(row.calls);
     const dissatisfied = Number(row.dissatisfied);
     const resolved = Number(row.resolved);
     const reached = Number(row.reached);
+    const callsYesterday = yesterdayByManager[row.manager_id] || 0;
     return {
       manager_name: row.manager_name,
       manager_initials: row.manager_initials,
       calls,
+      calls_yesterday: callsYesterday,
+      calls_delta: calls - callsYesterday,
       reached,
       reach_rate: calls ? Math.round((reached / calls) * 100) : 0,
       dissatisfied,
