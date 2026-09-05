@@ -25,8 +25,20 @@ function tagPillClass(tag) {
 }
 
 function fmtTime(iso) {
-  const d = new Date(iso.replace(' ', 'T') + 'Z');
-  return new Intl.DateTimeFormat('en-US', { hour: 'numeric', minute: '2-digit', hour12: true, timeZone: 'Asia/Dhaka' }).format(d);
+  // created_at is already stamped with Dhaka wall-clock time on the server
+  // (see server.js dhakaNowSql / the schema's "+6 hours" default) — it is
+  // NOT a UTC timestamp. Treating it as UTC and re-converting to Asia/Dhaka
+  // (the old behavior) added a second +6h shift on top of the one already
+  // baked into the stored value, so every call showed 6 hours ahead of when
+  // it was actually logged. Parse the stored wall-clock time directly and
+  // just format it — no timezone conversion needed.
+  const timePart = iso.split(' ')[1] || iso;
+  const [hStr, mStr] = timePart.split(':');
+  let h = Number(hStr);
+  const period = h >= 12 ? 'PM' : 'AM';
+  h = h % 12;
+  if (h === 0) h = 12;
+  return `${h}:${mStr} ${period}`;
 }
 
 async function api(path, opts) {
@@ -136,9 +148,13 @@ async function refreshPerformance() {
   body.innerHTML = '';
   rows.forEach((r) => {
     const tr = document.createElement('tr');
+    const deltaClass = r.calls_delta > 0 ? 'up' : (r.calls_delta < 0 ? 'down' : '');
+    const deltaArrow = r.calls_delta > 0 ? '▲' : (r.calls_delta < 0 ? '▼' : '—');
+    const deltaLabel = r.calls_delta === 0 ? '—' : `${deltaArrow} ${Math.abs(r.calls_delta)}`;
     tr.innerHTML = `
       <td>${r.manager_name}</td>
       <td>${r.calls}</td>
+      <td><span class="delta ${deltaClass}">${deltaLabel}</span> <span class="panel-sub" style="display:inline;">vs ${r.calls_yesterday} yesterday</span></td>
       <td>${r.reached}</td>
       <td>${r.reach_rate}%</td>
       <td>${r.dissatisfied}</td>
@@ -177,7 +193,7 @@ async function refreshCallLog() {
   bodies.forEach((body) => {
     body.innerHTML = '';
     if (!rows.length) {
-      body.innerHTML = '<tr class="empty-row"><td colspan="5">No calls logged for this filter yet.</td></tr>';
+      body.innerHTML = '<tr class="empty-row"><td colspan="6">No calls logged for this filter yet.</td></tr>';
       return;
     }
     rows.forEach((c) => {
@@ -196,10 +212,14 @@ async function refreshCallLog() {
       const tdSub = document.createElement('td');
       tdSub.innerHTML = c.sub_tag ? `<span class="tag-pill tag-neutral">${c.sub_tag}</span>` : '—';
 
+      const tdNotes = document.createElement('td');
+      tdNotes.className = 'merchant-sub';
+      tdNotes.textContent = c.notes || '—';
+
       const tdTime = document.createElement('td');
       tdTime.textContent = fmtTime(c.created_at);
 
-      tr.append(tdMerchant, tdManager, tdTag, tdSub, tdTime);
+      tr.append(tdMerchant, tdManager, tdTag, tdSub, tdNotes, tdTime);
       body.appendChild(tr);
     });
   });
